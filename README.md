@@ -87,4 +87,4 @@ El código está en `src/features/tickets`.
 
 ## URL
 
-https://bryalv77.github.io/classora-test/
+https://classora.bryanalvarado.com
