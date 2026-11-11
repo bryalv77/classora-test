@@ -200,10 +200,17 @@ nav span {
 
 .due {
   display: flex;
+  flex-direction: column;
+  width: 14rem; /* fixed so the column doesn't resize when editing */
+  gap: 0.5rem;
+  align-items: flex-start;
+  font-variant-numeric: tabular-nums;
+}
+
+.due form {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  align-items: center;
-  font-variant-numeric: tabular-nums;
 }
 
 td button {
