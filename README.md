@@ -83,6 +83,8 @@ Si se cambia `openapi-rest.yml`, ejecutar `pnpm generate`: un test falla si los 
 
 El código está en `src/features/tickets`.
 
+**Estilos:** no se ha trabajado con estilos en este proyecto. Se usó HTML básico y solo un CSS mínimo, muy por encima, para mejorar un poco la UX.
+
 ---
 
 ## URL
