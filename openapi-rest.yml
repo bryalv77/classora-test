@@ -1,0 +1,579 @@
+openapi: 3.0.3
+
+info:
+  title: Security Ticketing API
+  version: 1.0.0
+  description: >
+    Internal API for the security ticketing app. Errors are Problem Details (RFC 9457)
+    and every date is RFC 3339 in UTC.
+
+servers:
+  - url: https://api.security.example.com
+    description: Production
+  - url: https://api.staging.security.example.com
+    description: Staging
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Tickets
+    description: Security tickets
+  - name: Users
+    description: The logged-in user
+
+paths:
+  /api/v1/tickets:
+    get:
+      operationId: listTickets
+      tags: [Tickets]
+      summary: List tickets
+      description: >
+        Paginated list with optional filters and sorting. SEVERITY and STATE sort by rank
+        (CRITICAL to LOW, REPORTED to DONE) and not alphabetically. When sorting by DUE_DATE,
+        tickets without a due date always come last.
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/StateFilter'
+        - $ref: '#/components/parameters/SeverityFilter'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Direction'
+      responses:
+        '200':
+          description: One page of tickets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/v1/tickets/{id}:
+    patch:
+      operationId: updateTicket
+      tags: [Tickets]
+      summary: Set the commitment date of a ticket
+      description: >
+        Changes the dueDate of a ticket. Needs the tickets.update permission.
+        A REPORTED ticket moves to IN_PROGRESS on its own, and a DONE ticket can't be modified.
+      parameters:
+        - $ref: '#/components/parameters/TicketId'
+      requestBody:
+        required: true
+        description: Fields to change
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketUpdate'
+      responses:
+        '200':
+          description: The ticket after the update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/v1/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Users]
+      summary: Get the logged-in user
+      description: >
+        Returns the permissions of the logged-in user. The UI uses them to show or hide actions,
+        but the server checks them again on every request.
+      responses:
+        '200':
+          description: The logged-in user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'JWT sent as "Authorization: Bearer <token>"'
+
+  parameters:
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: Number of tickets to skip
+      example: 40
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 1000000
+        default: 0
+        description: Index of the first ticket to return
+        example: 40
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Page size
+      example: 20
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 100
+        default: 20
+        description: Max tickets per page
+        example: 20
+    Query:
+      name: q
+      in: query
+      required: false
+      description: Text to look for in the ticket key and the asset
+      example: log4j
+      schema:
+        type: string
+        maxLength: 100
+        default: ''
+        description: Search text, case insensitive
+        example: log4j
+    StateFilter:
+      name: state
+      in: query
+      required: false
+      description: Only tickets in this state. ALL means no filter
+      example: IN_PROGRESS
+      schema:
+        $ref: '#/components/schemas/TicketStateFilter'
+    SeverityFilter:
+      name: severity
+      in: query
+      required: false
+      description: Only tickets with this severity. ALL means no filter
+      example: HIGH
+      schema:
+        $ref: '#/components/schemas/SeverityFilter'
+    Sort:
+      name: sort
+      in: query
+      required: false
+      description: Field to sort by
+      example: TARGET_DATE
+      schema:
+        $ref: '#/components/schemas/TicketSortField'
+    Direction:
+      name: direction
+      in: query
+      required: false
+      description: Sort order
+      example: ASC
+      schema:
+        $ref: '#/components/schemas/SortDirection'
+    TicketId:
+      name: id
+      in: path
+      required: true
+      description: Ticket id
+      example: tkt_8f3a1c2d
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9_-]{1,64}$'
+        maxLength: 64
+        description: Ticket id, letters, digits, dash and underscore
+        example: tkt_8f3a1c2d
+
+  responses:
+    Unauthorized:
+      description: Missing, expired or invalid token
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.security.example.com/problems/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: The access token has expired
+            instance: /api/v1/tickets
+    Forbidden:
+      description: The user doesn't have the tickets.update permission
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.security.example.com/problems/forbidden
+            title: Forbidden
+            status: 403
+            detail: Updating a ticket requires tickets.update
+            instance: /api/v1/tickets/tkt_8f3a1c2d
+    NotFound:
+      description: There is no ticket with that id
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.security.example.com/problems/not-found
+            title: Ticket not found
+            status: 404
+            detail: No ticket with id tkt_8f3a1c2d
+            instance: /api/v1/tickets/tkt_8f3a1c2d
+    Conflict:
+      description: The ticket is DONE and can't be modified
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.security.example.com/problems/ticket-closed
+            title: Ticket already closed
+            status: 409
+            detail: Tickets in state DONE can't be modified
+            instance: /api/v1/tickets/tkt_8f3a1c2d
+    UnprocessableEntity:
+      description: A parameter or a body field is invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://api.security.example.com/problems/validation-error
+            title: Validation error
+            status: 422
+            detail: One or more parameters are invalid
+            instance: /api/v1/tickets
+            errors:
+              - parameter: limit
+                message: must be between 1 and 100
+
+  schemas:
+    Ticket:
+      type: object
+      description: A security ticket
+      example:
+        id: tkt_8f3a1c2d
+        key: SEC-1024
+        asset: payments-api
+        assignedTeam: platform-security
+        assignee: marta.ruiz@example.com
+        severity: HIGH
+        state: IN_PROGRESS
+        targetDate: '2026-11-30T23:59:59Z'
+        dueDate: '2026-11-15T10:00:00Z'
+        lastModified: '2026-10-01T08:30:00Z'
+      required:
+        - id
+        - key
+        - asset
+        - assignedTeam
+        - assignee
+        - severity
+        - state
+        - targetDate
+        - dueDate
+        - lastModified
+      properties:
+        id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{1,64}$'
+          maxLength: 64
+          description: Ticket id
+          example: tkt_8f3a1c2d
+        key:
+          type: string
+          pattern: '^SEC-[0-9]{1,9}$'
+          maxLength: 20
+          description: Short key people use to refer to the ticket
+          example: SEC-1024
+        asset:
+          type: string
+          maxLength: 100
+          description: Affected system or service, "None" if unknown
+          example: payments-api
+        assignedTeam:
+          type: string
+          nullable: true
+          maxLength: 100
+          description: Team in charge, null if nobody has picked it up
+          example: platform-security
+        assignee:
+          type: string
+          format: email
+          maxLength: 254
+          description: Email of the person working on it
+          example: marta.ruiz@example.com
+        severity:
+          description: How serious the issue is
+          example: HIGH
+          allOf:
+            - $ref: '#/components/schemas/Severity'
+        state:
+          description: Where the ticket is in its lifecycle
+          example: IN_PROGRESS
+          allOf:
+            - $ref: '#/components/schemas/TicketState'
+        targetDate:
+          type: string
+          format: date-time
+          maxLength: 35
+          description: Deadline to get it fixed
+          example: '2026-11-30T23:59:59Z'
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+          maxLength: 35
+          description: Date the assignee committed to, null until they set one
+          example: '2026-11-15T10:00:00Z'
+        lastModified:
+          type: string
+          format: date-time
+          maxLength: 35
+          description: Last time the ticket changed
+          example: '2026-10-01T08:30:00Z'
+
+    TicketList:
+      type: object
+      description: One page of tickets
+      example:
+        data:
+          - id: tkt_8f3a1c2d
+            key: SEC-1024
+            asset: payments-api
+            assignedTeam: platform-security
+            assignee: marta.ruiz@example.com
+            severity: HIGH
+            state: IN_PROGRESS
+            targetDate: '2026-11-30T23:59:59Z'
+            dueDate: '2026-11-15T10:00:00Z'
+            lastModified: '2026-10-01T08:30:00Z'
+        pagination:
+          offset: 0
+          limit: 20
+          totalElements: 134
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          maxItems: 100
+          description: Tickets in the requested order
+          items:
+            $ref: '#/components/schemas/Ticket'
+          example:
+            - id: tkt_8f3a1c2d
+              key: SEC-1024
+              asset: payments-api
+              assignedTeam: platform-security
+              assignee: marta.ruiz@example.com
+              severity: HIGH
+              state: IN_PROGRESS
+              targetDate: '2026-11-30T23:59:59Z'
+              dueDate: '2026-11-15T10:00:00Z'
+              lastModified: '2026-10-01T08:30:00Z'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      description: Where this page sits in the full result
+      example:
+        offset: 0
+        limit: 20
+        totalElements: 134
+      required: [offset, limit, totalElements]
+      properties:
+        offset:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 1000000
+          description: Offset that was used
+          example: 0
+        limit:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+          description: Page size that was used
+          example: 20
+        totalElements:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100000000
+          description: Tickets that match the filters, across all pages
+          example: 134
+
+    TicketUpdate:
+      type: object
+      description: What can be changed on a ticket
+      example:
+        dueDate: '2026-11-15T10:00:00Z'
+      required: [dueDate]
+      additionalProperties: false
+      properties:
+        dueDate:
+          type: string
+          format: date-time
+          maxLength: 35
+          description: New commitment date
+          example: '2026-11-15T10:00:00Z'
+
+    CurrentUser:
+      type: object
+      description: The logged-in user
+      example:
+        permissions:
+          - tickets.read
+          - tickets.update
+      required: [permissions]
+      properties:
+        permissions:
+          type: array
+          maxItems: 100
+          description: What the user is allowed to do
+          items:
+            type: string
+            pattern: '^[a-z]+(\.[a-z]+)*$'
+            maxLength: 64
+            description: Permission name, like tickets.update
+            example: tickets.update
+          example:
+            - tickets.read
+            - tickets.update
+
+    TicketState:
+      type: string
+      description: Lifecycle state of a ticket
+      enum: [REPORTED, IN_PROGRESS, PENDING_SECURITY, DONE]
+      maxLength: 20
+      example: IN_PROGRESS
+
+    TicketStateFilter:
+      type: string
+      description: A ticket state, or ALL to not filter
+      enum: [ALL, REPORTED, IN_PROGRESS, PENDING_SECURITY, DONE]
+      maxLength: 20
+      default: ALL
+      example: IN_PROGRESS
+
+    Severity:
+      type: string
+      description: How serious a ticket is
+      enum: [CRITICAL, HIGH, MEDIUM, LOW]
+      maxLength: 20
+      example: HIGH
+
+    SeverityFilter:
+      type: string
+      description: A severity, or ALL to not filter
+      enum: [ALL, CRITICAL, HIGH, MEDIUM, LOW]
+      maxLength: 20
+      default: ALL
+      example: HIGH
+
+    TicketSortField:
+      type: string
+      description: Field the list can be sorted by
+      enum: [KEY, ASSET, SEVERITY, STATE, TARGET_DATE, DUE_DATE, LAST_MODIFIED]
+      maxLength: 20
+      default: LAST_MODIFIED
+      example: TARGET_DATE
+
+    SortDirection:
+      type: string
+      description: Ascending or descending
+      enum: [ASC, DESC]
+      maxLength: 4
+      default: DESC
+      example: ASC
+
+    Problem:
+      type: object
+      description: Problem Details object (RFC 9457)
+      example:
+        type: https://api.security.example.com/problems/validation-error
+        title: Validation error
+        status: 422
+        detail: One or more parameters are invalid
+        instance: /api/v1/tickets
+        errors:
+          - parameter: limit
+            message: must be between 1 and 100
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          maxLength: 200
+          description: URI that identifies the kind of problem
+          example: https://api.security.example.com/problems/validation-error
+        title:
+          type: string
+          maxLength: 200
+          description: Short summary of the problem
+          example: Validation error
+        status:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+          description: HTTP status code
+          example: 422
+        detail:
+          type: string
+          maxLength: 1000
+          description: Explanation of this particular occurrence
+          example: One or more parameters are invalid
+        instance:
+          type: string
+          format: uri-reference
+          maxLength: 200
+          description: URI of this particular occurrence
+          example: /api/v1/tickets
+        errors:
+          type: array
+          maxItems: 50
+          description: Invalid fields, only sent with a 422
+          items:
+            $ref: '#/components/schemas/InvalidParameter'
+          example:
+            - parameter: limit
+              message: must be between 1 and 100
+
+    InvalidParameter:
+      type: object
+      description: A query parameter or body field that failed validation
+      example:
+        parameter: limit
+        message: must be between 1 and 100
+      required: [parameter, message]
+      properties:
+        parameter:
+          type: string
+          maxLength: 100
+          description: Name of the invalid parameter or field
+          example: limit
+        message:
+          type: string
+          maxLength: 300
+          description: What is wrong with it
+          example: must be between 1 and 100
