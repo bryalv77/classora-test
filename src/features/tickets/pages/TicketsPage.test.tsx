@@ -111,13 +111,13 @@ describe('TicketsPage', () => {
     renderWithProviders(<TicketsPage />);
     await screen.findByRole('table');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Fecha objetivo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'F. objetivo' }));
     await waitFor(() => expect(location()).toBe('/?sort=TARGET_DATE&direction=ASC'));
-    expect(await screen.findByRole('columnheader', { name: /Fecha objetivo/ })).toHaveAttribute('aria-sort', 'ascending');
+    expect(await screen.findByRole('columnheader', { name: /F. objetivo/ })).toHaveAttribute('aria-sort', 'ascending');
 
-    await userEvent.click(screen.getByRole('button', { name: /Fecha objetivo/ }));
+    await userEvent.click(screen.getByRole('button', { name: /F. objetivo/ }));
     await waitFor(() => expect(location()).toBe('/?sort=TARGET_DATE')); // DESC is the default, so it is not serialized
-    expect(await screen.findByRole('columnheader', { name: /Fecha objetivo/ })).toHaveAttribute('aria-sort', 'descending');
+    expect(await screen.findByRole('columnheader', { name: /F. objetivo/ })).toHaveAttribute('aria-sort', 'descending');
   });
 
   it('sorts the rows by any column', async () => {

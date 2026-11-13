@@ -49,7 +49,7 @@ describe('TicketsTable', () => {
     it('every column is sortable', () => {
       setup();
       expect(screen.getAllByRole('button')).toHaveLength(7);
-      for (const name of ['Clave', 'Asset', 'Severidad', 'Estado', 'Fecha objetivo', 'Compromiso', 'Última modificación']) {
+      for (const name of ['Clave', 'Asset', 'Severidad', 'Estado', 'F. objetivo', 'Compromiso', 'Última mod.']) {
         expect(screen.getByRole('button', { name })).toBeInTheDocument();
       }
     });
