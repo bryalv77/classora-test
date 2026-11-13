@@ -30,20 +30,22 @@ export function TicketsTable({ tickets, busy, sort, direction, onSort, onSetDueD
   if (tickets.length === 0 && !busy) return <p>Sin resultados</p>;
 
   return (
-    <table aria-busy={busy} style={{ opacity: busy ? 0.5 : 1 }}>
-      <caption>Tickets de seguridad</caption>
-      <thead>
-        <tr>
-          {SORT_FIELDS.map((field) => (
-            <SortHeader key={field} field={field} sort={sort} direction={direction} onSort={onSort} />
+    <div className="table-scroll">
+      <table aria-busy={busy} style={{ opacity: busy ? 0.5 : 1 }}>
+        <caption>Tickets de seguridad</caption>
+        <thead>
+          <tr>
+            {SORT_FIELDS.map((field) => (
+              <SortHeader key={field} field={field} sort={sort} direction={direction} onSort={onSort} />
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {tickets.map((t) => (
+            <TicketRow key={t.id} ticket={t} onSetDueDate={onSetDueDate} />
           ))}
-        </tr>
-      </thead>
-      <tbody>
-        {tickets.map((t) => (
-          <TicketRow key={t.id} ticket={t} onSetDueDate={onSetDueDate} />
-        ))}
-      </tbody>
-    </table>
+        </tbody>
+      </table>
+    </div>
   );
 }

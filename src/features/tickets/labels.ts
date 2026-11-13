@@ -22,7 +22,7 @@ export const SORT_LABELS: Record<components['schemas']['TicketSortField'], strin
   ASSET: 'Asset',
   SEVERITY: 'Severidad',
   STATE: 'Estado',
-  TARGET_DATE: 'Fecha objetivo',
+  TARGET_DATE: 'F. objetivo',
   DUE_DATE: 'Compromiso',
-  LAST_MODIFIED: 'Última modificación',
+  LAST_MODIFIED: 'Última mod.',
 };
