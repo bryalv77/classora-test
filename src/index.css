@@ -1,5 +1,4 @@
 :root {
-  /* no colors of our own: text/background come from the browser, borders and hovers derive from the text color */
   --border: color-mix(in srgb, currentColor 25%, transparent);
   --row-hover: color-mix(in srgb, currentColor 8%, transparent);
   --radius: 8px;
@@ -93,6 +92,7 @@ p {
 
 table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
@@ -111,7 +111,7 @@ caption {
 th,
 td {
   padding: 0.625rem 0.875rem;
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid var(--border);
 }
 
@@ -201,15 +201,16 @@ nav span {
 .due {
   display: flex;
   flex-direction: column;
-  width: 14rem; /* fixed so the column doesn't resize when editing */
+  width: 100%;
   gap: 0.5rem;
-  align-items: flex-start;
+  align-items: center;
   font-variant-numeric: tabular-nums;
 }
 
 .due form {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.5rem;
 }
 
@@ -233,4 +234,13 @@ td input {
   flex: 1 1 8rem;
   min-width: 0;
   padding: 0.25rem 0.5rem;
+}
+
+.flat {
+  background: none;
+  border: 0;
+}
+
+.flat:hover:not(:disabled) {
+  text-decoration: underline;
 }

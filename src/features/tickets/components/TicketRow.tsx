@@ -39,7 +39,7 @@ export function TicketRow({ ticket, onSetDueDate }: Props) {
                 onChange={(e) => setDay(e.target.value)}
               />
               <button type="submit">Guardar</button>
-              <button type="button" onClick={() => setEditing(false)}>Cancelar</button>
+              <button type="button" className="flat" onClick={() => setEditing(false)}>Cancelar</button>
             </form>
           ) : (
             <button
