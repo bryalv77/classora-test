@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { SEVERITY_LABELS, STATE_LABELS } from '../labels';
 import type { Ticket } from '../types';
 
@@ -7,7 +7,10 @@ type Props = {
   onSetDueDate?: (id: string, dueDate: string) => void;
 };
 
-export function TicketRow({ ticket, onSetDueDate }: Props) {
+const dateFmt = new Intl.DateTimeFormat();
+const fmt = (iso: string) => dateFmt.format(new Date(iso));
+
+export const TicketRow = memo(function TicketRow({ ticket, onSetDueDate }: Props) {
   const [editing, setEditing] = useState(false);
   const [day, setDay] = useState('');
 
@@ -17,10 +20,10 @@ export function TicketRow({ ticket, onSetDueDate }: Props) {
       <td>{ticket.asset}</td>
       <td>{SEVERITY_LABELS[ticket.severity]}</td>
       <td>{STATE_LABELS[ticket.state]}</td>
-      <td>{new Date(ticket.targetDate).toLocaleDateString()}</td>
+      <td>{fmt(ticket.targetDate)}</td>
       <td>
         <div className="due">
-        <span>{ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : '—'}</span>
+        <span>{ticket.dueDate ? fmt(ticket.dueDate) : '—'}</span>
         {onSetDueDate &&
           (editing ? (
             <form
@@ -57,7 +60,7 @@ export function TicketRow({ ticket, onSetDueDate }: Props) {
           ))}
         </div>
       </td>
-      <td>{new Date(ticket.lastModified).toLocaleDateString()}</td>
+      <td>{fmt(ticket.lastModified)}</td>
     </tr>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Pagination } from '@/shared/components/Pagination';
 import { Spinner } from '@/shared/components/Spinner';
 import { TicketFilters } from '../components/TicketFilters';
@@ -20,6 +20,9 @@ export function TicketsPage() {
   const { params, setFilters, setPage } = useTicketListParams();
   const canUpdate = useCan('tickets.update');
   const setDueDate = useSetDueDate();
+  const { mutate } = setDueDate;
+  // TicketRow (memo) no se re-renderizaría en cada render de la pagina
+  const onSetDueDate = useCallback((id: string, dueDate: string) => mutate({ id, dueDate }), [mutate]);
   const { data, dataUpdatedAt, isPlaceholderData, isFetching, isError, error, refetch } = useTickets(params);
 
   const overdue = useMemo(
@@ -57,7 +60,7 @@ export function TicketsPage() {
             sort={params.sort}
             direction={params.direction}
             onSort={setFilters}
-            onSetDueDate={canUpdate ? (id, dueDate) => setDueDate.mutate({ id, dueDate }) : undefined}
+            onSetDueDate={canUpdate ? onSetDueDate : undefined}
           />
           <Pagination
             total={data.pagination.totalElements}
